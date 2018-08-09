@@ -21,8 +21,23 @@ func printFuncSig(f *ir.Function) {
         fmt.Println(f.Name)
 }
 
+func printInstruction(inst ir.Instruction) {
+        switch inst := inst.(type) {
+        case *ir.InstAdd:
+                fmt.Println("add")
+                return
+        case *ir.InstSub:
+                fmt.Println("sub")
+                return
+        default:
+                return
+        }
+}
+
 func printFuncBlock(b *ir.BasicBlock) {
-        // Loop over functions and print them out in bash
+        for _, inst := range b.Insts {
+                printInstruction(inst)
+        }
 }
 
 func printFuncEnd() {
@@ -32,8 +47,9 @@ func printFuncEnd() {
 
 func convertFuncToBash(f *ir.Function) {
         printFuncSig(f)
-        // for block in f.blocks
-        //      printFuncBlock(f.block)
+        for _, block := range f.Blocks {
+                printFuncBlock(block)
+        }
         printFuncEnd()
 }
 
