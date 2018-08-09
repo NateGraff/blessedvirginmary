@@ -5,7 +5,7 @@ import (
         "os"
         "log"
         "github.com/llir/llvm/asm"
-        //"github.com/llir/llvm/ir"
+        "github.com/llir/llvm/ir"
         //"github.com/llir/llvm/ir/constant"
         //"github.com/llir/llvm/ir/types"
         //"github.com/llir/llvm/ir/value"
@@ -14,6 +14,27 @@ import (
 func printUsage() {
         fmt.Printf("blessedvirginmary usage:\n")
         fmt.Printf("    blessedvirginmary <input>.ir [<input2>.ir [<input3>.ir ... ] ]\n")
+}
+
+func printFuncSig(f *ir.Function) {
+        // Print the function signature
+        fmt.Println(f.Name)
+}
+
+func printFuncBlock(b *ir.BasicBlock) {
+        // Loop over functions and print them out in bash
+}
+
+func printFuncEnd() {
+        fmt.Println("}")
+}
+
+
+func convertFuncToBash(f *ir.Function) {
+        printFuncSig(f)
+        // for block in f.blocks
+        //      printFuncBlock(f.block)
+        printFuncEnd()
 }
 
 func main() {
@@ -28,9 +49,9 @@ func main() {
                 if err != nil {
                         log.Fatal(err)
                 }
-                fmt.Println(parsedAsm)
+                for _, f := range parsedAsm.Funcs {
+                        convertFuncToBash(f)
+                }
         }
-
-        fmt.Printf("Greetings, Blessed Virgin Mary!\n")
 }
 
