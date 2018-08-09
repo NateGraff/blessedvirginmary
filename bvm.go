@@ -29,17 +29,6 @@ func getConstant(c constant.Constant) string {
         }
 }
 
-func getValue(v value.Value) string {
-        switch val := v.(type) {
-        case value.Named:
-                return val.GetName()
-        case constant.Constant:
-                return getConstant(val)
-        default:
-                return ""
-        }
-}
-
 func getDstValue(v value.Value) string {
         switch val := v.(type) {
         case value.Named:
