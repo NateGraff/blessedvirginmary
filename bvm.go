@@ -6,9 +6,9 @@ import (
         "log"
         "github.com/llir/llvm/asm"
         "github.com/llir/llvm/ir"
-        //"github.com/llir/llvm/ir/constant"
+        "github.com/llir/llvm/ir/constant"
         //"github.com/llir/llvm/ir/types"
-        //"github.com/llir/llvm/ir/value"
+        "github.com/llir/llvm/ir/value"
 )
 
 func printUsage() {
@@ -17,12 +17,59 @@ func printUsage() {
 }
 
 func printFuncSig(f *ir.Function) {
-        // Print the function signature
-        fmt.Println(f.Name)
+        fmt.Printf("%s() {\n", f.Name)
+}
+
+func getConstant(c constant.Constant) string {
+        switch c := c.(type) {
+        case *constant.Int:
+                return fmt.Sprintf("%d", c.X)
+        default:
+                return ""
+        }
+}
+
+func getValue(v value.Value) string {
+        switch val := v.(type) {
+        case value.Named:
+                return val.GetName()
+        case constant.Constant:
+                return getConstant(val)
+        default:
+                return ""
+        }
+}
+
+func getDstValue(v value.Value) string {
+        switch val := v.(type) {
+        case value.Named:
+                return val.GetName()
+        case constant.Constant:
+                return getConstant(val)
+        default:
+                return ""
+        }
+}
+
+func getSrcValue(v value.Value) string {
+        switch val := v.(type) {
+        case value.Named:
+                return "$" + val.GetName()
+        case constant.Constant:
+                return getConstant(val)
+        default:
+                return ""
+        }
 }
 
 func printInstruction(inst ir.Instruction) {
         switch inst := inst.(type) {
+        case *ir.InstAlloca:
+                return
+        case *ir.InstLoad:
+                fmt.Printf("r%s=\n", inst.Name)
+        case *ir.InstStore:
+                fmt.Printf("r%s=%s\n", getDstValue(inst.Dst), getSrcValue(inst.Src))
         case *ir.InstAdd:
                 fmt.Println("add")
                 return
@@ -37,6 +84,10 @@ func printInstruction(inst ir.Instruction) {
 func printFuncBlock(b *ir.BasicBlock) {
         for _, inst := range b.Insts {
                 printInstruction(inst)
+        }
+        switch term := b.Term.(type) {
+        case *ir.TermRet:
+                fmt.Printf("return %s\n", getSrcValue(term.X))
         }
 }
 
@@ -69,5 +120,7 @@ func main() {
                         convertFuncToBash(f)
                 }
         }
+
+        fmt.Println("main")
 }
 
