@@ -121,17 +121,18 @@ func printFuncBlock(b *ir.BasicBlock) {
         }
 }
 
-func printFuncEnd() {
-        fmt.Println("}")
-}
-
-
 func convertFuncToBash(f *ir.Function) {
-        printFuncSig(f)
+        // Top level function
+        fmt.Printf("%s() {\n", f.Name)
+        fmt.Printf("%s\n", "_br" + f.Name + f.Blocks[0].GetName())
+        fmt.Printf("}\n")
+
+        // Blocks
         for _, block := range f.Blocks {
+                fmt.Printf("%s() {\n", "_br" + f.GetName() + f.Blocks[0].GetName())
                 printFuncBlock(block)
+                fmt.Printf("}\n")
         }
-        printFuncEnd()
 }
 
 func main() {
