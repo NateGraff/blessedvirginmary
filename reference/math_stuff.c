@@ -4,5 +4,6 @@ int main(void) {
     x += 3;
     x -= 1;
     x /= 2;
+    x %= 6;
     return x;
 }

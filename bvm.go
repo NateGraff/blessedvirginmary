@@ -54,12 +54,17 @@ func getSrcValue(v value.Value) string {
 
 func printInstruction(inst ir.Instruction) {
         switch inst := inst.(type) {
+        /* Memory Instructions */
+
         case *ir.InstAlloca:
                 return
         case *ir.InstLoad:
                 fmt.Printf("r%s=%s\n", inst.Name, getSrcValue(inst.Src))
         case *ir.InstStore:
                 fmt.Printf("r%s=%s\n", getDstValue(inst.Dst), getSrcValue(inst.Src))
+
+        /* Math Instructions */
+
         case *ir.InstAdd:
                 fmt.Printf("r%s=$(expr %s + %s)\n", inst.Name, getSrcValue(inst.X), getSrcValue(inst.Y))
                 return
@@ -72,6 +77,12 @@ func printInstruction(inst ir.Instruction) {
         case *ir.InstSDiv:
                 fmt.Printf("r%s=$(expr %s / %s)\n", inst.Name, getSrcValue(inst.X), getSrcValue(inst.Y))
                 return
+        case *ir.InstSRem:
+                fmt.Printf("r%s=$(expr %s %% %s)\n", inst.Name, getSrcValue(inst.X), getSrcValue(inst.Y))
+                return
+        // What about UDiv, URem?
+        // Floating Point Instructions?
+
         default:
                 panic(fmt.Sprintf("Unknown instruction %s", inst))
         }
