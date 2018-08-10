@@ -5,6 +5,7 @@ import (
         "strings"
         "os"
         "log"
+        "strconv"
         //"github.com/kr/pretty"
         "github.com/llir/llvm/asm"
         "github.com/llir/llvm/ir"
@@ -45,7 +46,7 @@ func getDstValue(v value.Value) string {
 func getSrcValue(v value.Value) string {
         switch val := v.(type) {
         case value.Named:
-                return "$r" + val.GetName()
+                return "${r" + val.GetName() + "}"
         case constant.Constant:
                 return getConstant(val)
         default:
@@ -57,7 +58,7 @@ func instAllocaHelper(inst *ir.InstAlloca) string {
         switch t := inst.Typ.Elem.(type) {
         case *types.ArrayType:
                 prefilled := strings.Repeat("0 ", int(t.Len))
-                return fmt.Sprintf("r%s=(%s)\n", inst.Name, prefilled)
+                return fmt.Sprintf("s%s=(%s)\nr%s=s%s\n", inst.Name, prefilled, inst.Name, inst.Name)
         default:
                 return fmt.Sprintf("declare s%s\nr%s=s%s\n", inst.Name, inst.Name, inst.Name)
         }
@@ -72,10 +73,17 @@ func printInstruction(inst ir.Instruction) {
                 fmt.Printf("%s", instAllocaHelper(inst))
                 return
         case *ir.InstLoad:
-                fmt.Printf("eval r%s=\\$%s\n", inst.Name, getSrcValue(inst.Src))
+                fmt.Printf("eval r%s=\\${%s}\n", inst.Name, getSrcValue(inst.Src))
                 return
         case *ir.InstStore:
-                fmt.Printf("eval $r%s=%s\n", getDstValue(inst.Dst), getSrcValue(inst.Src))
+                fmt.Printf("eval %s=%s\n", getSrcValue(inst.Dst), getSrcValue(inst.Src))
+                return
+        case *ir.InstGetElementPtr:
+                index, err := strconv.Atoi(getSrcValue(inst.Indices[1]))
+                if err != nil {
+                        panic("")
+                }
+                fmt.Printf("r%s=%s[%d]\n", inst.Name, getSrcValue(inst.Src), index)
                 return
 
         /* Math Instructions */
