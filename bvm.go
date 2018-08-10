@@ -2,13 +2,14 @@ package main
 
 import (
         "fmt"
+        "strings"
         "os"
         "log"
         //"github.com/kr/pretty"
         "github.com/llir/llvm/asm"
         "github.com/llir/llvm/ir"
         "github.com/llir/llvm/ir/constant"
-        //"github.com/llir/llvm/ir/types"
+        "github.com/llir/llvm/ir/types"
         "github.com/llir/llvm/ir/value"
 )
 
@@ -52,16 +53,30 @@ func getSrcValue(v value.Value) string {
         }
 }
 
+func instAllocaHelper(inst *ir.InstAlloca) string {
+        switch t := inst.Typ.Elem.(type) {
+        case *types.ArrayType:
+                prefilled := strings.Repeat("0 ", int(t.Len))
+                return fmt.Sprintf("r%s=(%s)\n", inst.Name, prefilled)
+        default:
+                return fmt.Sprintf("declare s%s\nr%s=s%s\n", inst.Name, inst.Name, inst.Name)
+        }
+        return ""
+}
+
 func printInstruction(inst ir.Instruction) {
         switch inst := inst.(type) {
         /* Memory Instructions */
 
         case *ir.InstAlloca:
+                fmt.Printf("%s", instAllocaHelper(inst))
                 return
         case *ir.InstLoad:
-                fmt.Printf("r%s=%s\n", inst.Name, getSrcValue(inst.Src))
+                fmt.Printf("eval r%s=\\$%s\n", inst.Name, getSrcValue(inst.Src))
+                return
         case *ir.InstStore:
-                fmt.Printf("r%s=%s\n", getDstValue(inst.Dst), getSrcValue(inst.Src))
+                fmt.Printf("eval $r%s=%s\n", getDstValue(inst.Dst), getSrcValue(inst.Src))
+                return
 
         /* Math Instructions */
 
