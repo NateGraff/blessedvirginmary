@@ -43,3 +43,5 @@ done
 echo "-------------------------"
 echo -e "Pass count: ${COLOR_GREEN}${PASS_NUM}${COLOR_NC} Fail count: ${COLOR_RED}${FAIL_NUM}${COLOR_NC}"
 
+exit ${FAIL_NUM}
+
