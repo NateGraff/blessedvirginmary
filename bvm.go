@@ -4,7 +4,7 @@ import (
         "fmt"
         "os"
         "log"
-        "github.com/kr/pretty"
+        //"github.com/kr/pretty"
         "github.com/llir/llvm/asm"
         "github.com/llir/llvm/ir"
         "github.com/llir/llvm/ir/constant"
@@ -94,12 +94,21 @@ func printInstruction(inst ir.Instruction) {
 }
 
 func printFuncBlock(b *ir.BasicBlock) {
+		fmt.Printf("_br%s%s", b.getName(), b.Parent.getName())
         for _, inst := range b.Insts {
                 printInstruction(inst)
         }
         switch term := b.Term.(type) {
         case *ir.TermRet:
                 fmt.Printf("return %s\n", getSrcValue(term.X))
+		case *ir.TermCondBr:
+				fun1 := "_br" + term.TargetTrue.getName() + term.TargetTrue.Parent.getName()
+				fun2 := "_br" + term.TargetFalse.getName() + term.TargetFalse.Parent.getName()
+				fmt.Printf("if [ $r%s ]; then %s; else %s; fi", getDstValue(term.Cond), fun1, fun2)
+				fmt.printf("}")
+				printFuncBlock(term.TargetTrue)
+				printFuncBlock(term.TargetFalse)
+
         }
 }
 
@@ -110,10 +119,11 @@ func printFuncEnd() {
 
 func convertFuncToBash(f *ir.Function) {
         printFuncSig(f)
+		fmt.Printf("%s", "_br" + f.getName() + f.Blocks[0].getName())
+		fmt.Printf("}")
         for _, block := range f.Blocks {
                 printFuncBlock(block)
         }
-        printFuncEnd()
 }
 
 func main() {
@@ -128,7 +138,7 @@ func main() {
                 if err != nil {
                         log.Fatal(err)
                 }
-                pretty.Println(parsedAsm)
+                //pretty.Println(parsedAsm)
                 for _, f := range parsedAsm.Funcs {
                         convertFuncToBash(f)
                 }
