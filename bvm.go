@@ -4,7 +4,7 @@ import (
         "fmt"
         "os"
         "log"
-        //"github.com/kr/pretty"
+        "github.com/kr/pretty"
         "github.com/llir/llvm/asm"
         "github.com/llir/llvm/ir"
         "github.com/llir/llvm/ir/constant"
@@ -52,6 +52,19 @@ func getSrcValue(v value.Value) string {
         }
 }
 
+func printIcmp(inst ir.InstICmp) {
+		var op string
+		switch inst.Pred {
+		case ir.IntNE:
+				op = " != "
+		default:
+				op = ""
+		}
+
+		fmt.Printf("r%s=`if [ \"$r\"%s%s\"$r\"%s ]; then echo false; else echo true; fi`\n", inst.Name, getDstValue(inst.X), op, getDstValue(inst.Y))
+		return
+}
+
 func printInstruction(inst ir.Instruction) {
         switch inst := inst.(type) {
         case *ir.InstAlloca:
@@ -71,6 +84,9 @@ func printInstruction(inst ir.Instruction) {
                 return
         case *ir.InstSDiv:
                 fmt.Printf("r%s=$(expr %s / %s)\n", inst.Name, getSrcValue(inst.X), getSrcValue(inst.Y))
+                return
+        case  *ir.InstICmp:
+                printIcmp(*inst)
                 return
         default:
                 panic(fmt.Sprintf("Unknown instruction %s", inst))
@@ -112,7 +128,7 @@ func main() {
                 if err != nil {
                         log.Fatal(err)
                 }
-                //pretty.Println(parsedAsm)
+                pretty.Println(parsedAsm)
                 for _, f := range parsedAsm.Funcs {
                         convertFuncToBash(f)
                 }
