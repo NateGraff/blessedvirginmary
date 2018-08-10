@@ -4,6 +4,7 @@ import (
         "fmt"
         "os"
         "log"
+        //"github.com/kr/pretty"
         "github.com/llir/llvm/asm"
         "github.com/llir/llvm/ir"
         "github.com/llir/llvm/ir/constant"
@@ -43,7 +44,7 @@ func getDstValue(v value.Value) string {
 func getSrcValue(v value.Value) string {
         switch val := v.(type) {
         case value.Named:
-                return "$" + val.GetName()
+                return "$r" + val.GetName()
         case constant.Constant:
                 return getConstant(val)
         default:
@@ -56,17 +57,23 @@ func printInstruction(inst ir.Instruction) {
         case *ir.InstAlloca:
                 return
         case *ir.InstLoad:
-                fmt.Printf("r%s=\n", inst.Name)
+                fmt.Printf("r%s=%s\n", inst.Name, getSrcValue(inst.Src))
         case *ir.InstStore:
                 fmt.Printf("r%s=%s\n", getDstValue(inst.Dst), getSrcValue(inst.Src))
         case *ir.InstAdd:
-                fmt.Println("add")
+                fmt.Printf("r%s=$(expr %s + %s)\n", inst.Name, getSrcValue(inst.X), getSrcValue(inst.Y))
                 return
         case *ir.InstSub:
-                fmt.Println("sub")
+                fmt.Printf("r%s=$(expr %s - %s)\n", inst.Name, getSrcValue(inst.X), getSrcValue(inst.Y))
+                return
+        case *ir.InstMul:
+                fmt.Printf("r%s=$(expr %s \\* %s)\n", inst.Name, getSrcValue(inst.X), getSrcValue(inst.Y))
+                return
+        case *ir.InstSDiv:
+                fmt.Printf("r%s=$(expr %s / %s)\n", inst.Name, getSrcValue(inst.X), getSrcValue(inst.Y))
                 return
         default:
-                return
+                panic(fmt.Sprintf("Unknown instruction %s", inst))
         }
 }
 
@@ -105,6 +112,7 @@ func main() {
                 if err != nil {
                         log.Fatal(err)
                 }
+                //pretty.Println(parsedAsm)
                 for _, f := range parsedAsm.Funcs {
                         convertFuncToBash(f)
                 }
