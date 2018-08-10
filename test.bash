@@ -11,6 +11,7 @@ declare -A TEST_LIST=(
         [math_stuff]="0"
         [ptr]="5"
         [ptrtoarray]="0"
+        [branch]="0"
 )
 
 PASS_NUM=0

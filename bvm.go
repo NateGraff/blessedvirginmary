@@ -55,16 +55,16 @@ func getSrcValue(v value.Value) string {
 }
 
 func printIcmp(inst ir.InstICmp) {
-		var op string
-		switch inst.Pred {
-		case ir.IntNE:
-				op = " != "
-		default:
-				op = ""
-		}
+        var op string
+        switch inst.Pred {
+        case ir.IntNE:
+                        op = " != "
+        default:
+                        op = ""
+        }
 
-		fmt.Printf("r%s=`if [ \"$r\"%s%s\"$r\"%s ]; then echo false; else echo true; fi`\n", inst.Name, getDstValue(inst.X), op, getDstValue(inst.Y))
-		return
+        fmt.Printf("r%s=`if [ \"$r\"%s%s\"$r\"%s ]; then echo false; else echo true; fi`\n", inst.Name, getDstValue(inst.X), op, getDstValue(inst.Y))
+        return
 }
 
 func instAllocaHelper(inst *ir.InstAlloca) string {
@@ -128,7 +128,6 @@ func printInstruction(inst ir.Instruction) {
 }
 
 func printFuncBlock(b *ir.BasicBlock) {
-		fmt.Printf("_br%s%s", b.GetName(), b.Parent.GetName())
         for _, inst := range b.Insts {
                 printInstruction(inst)
         }
@@ -138,11 +137,7 @@ func printFuncBlock(b *ir.BasicBlock) {
 		case *ir.TermCondBr:
 				fun1 := "_br" + term.TargetTrue.GetName() + term.TargetTrue.Parent.GetName()
 				fun2 := "_br" + term.TargetFalse.GetName() + term.TargetFalse.Parent.GetName()
-				fmt.Printf("if [ $r%s ]; then %s; else %s; fi", getDstValue(term.Cond), fun1, fun2)
-				fmt.Printf("}")
-				printFuncBlock(term.TargetTrue)
-				printFuncBlock(term.TargetFalse)
-
+				fmt.Printf("if [ $r%s ]; then %s; else %s; fi\n", getDstValue(term.Cond), fun1, fun2)
         }
 }
 
