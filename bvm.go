@@ -96,7 +96,7 @@ func printInstruction(inst ir.Instruction) {
                 if err != nil {
                         panic("")
                 }
-                fmt.Printf("%s=${local[%s_%d]}\n", getLValue(inst), getRValue(inst.Src), index)
+                fmt.Printf("%s=%s_%d\n", getLValue(inst), getRValue(inst.Src), index)
                 return
 
         case *ir.InstCall:
