@@ -99,6 +99,13 @@ func printInstruction(inst ir.Instruction) {
                 fmt.Printf("r%s=%s[%d]\n", inst.Name, getSrcValue(inst.Src), index)
                 return
 
+        case *ir.InstCall:
+                fmt.Printf("%s ", getDstValue(inst.Callee))
+                for _, arg := range inst.Args {
+                        fmt.Printf("%s", getSrcValue(arg))
+                }
+                fmt.Printf("\n")
+
         /* Math Instructions */
 
         case *ir.InstAdd:
