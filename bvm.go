@@ -134,10 +134,10 @@ func printFuncBlock(b *ir.BasicBlock) {
         switch term := b.Term.(type) {
         case *ir.TermRet:
                 fmt.Printf("return %s\n", getSrcValue(term.X))
-		case *ir.TermCondBr:
-				fun1 := "_br" + term.TargetTrue.GetName() + term.TargetTrue.Parent.GetName()
-				fun2 := "_br" + term.TargetFalse.GetName() + term.TargetFalse.Parent.GetName()
-				fmt.Printf("if [ $r%s ]; then %s; else %s; fi\n", getDstValue(term.Cond), fun1, fun2)
+        case *ir.TermCondBr:
+                fun1 := "_br" + term.TargetTrue.Parent.Name + term.TargetTrue.Name
+                fun2 := "_br" + term.TargetFalse.Parent.Name + term.TargetFalse.Name
+                fmt.Printf("if [ $r%s ]; then %s; else %s; fi\n", getDstValue(term.Cond), fun1, fun2)
         }
 }
 
@@ -149,7 +149,7 @@ func convertFuncToBash(f *ir.Function) {
 
         // Blocks
         for _, block := range f.Blocks {
-                fmt.Printf("%s() {\n", "_br" + f.GetName() + f.Blocks[0].GetName())
+                fmt.Printf("%s() {\n", "_br" + f.GetName() + block.Name)
                 printFuncBlock(block)
                 fmt.Printf("}\n")
         }
