@@ -75,7 +75,7 @@ func printIcmp(inst ir.InstICmp) {
         default:
                 operand = "eq"
         }
-        fmt.Printf("local[r%s]=`if [ \"%s\" -%s \"%s\" ]; then echo false; else echo true; fi`\n", inst.Name, getRValue(inst.X), operand, getRValue(inst.Y))
+        fmt.Printf("local[r%s]=`if [ \"%s\" -%s \"%s\" ]; then echo true; fi`\n", inst.Name, getRValue(inst.X), operand, getRValue(inst.Y))
         return
 }
 
@@ -147,6 +147,15 @@ func printInstruction(inst ir.Instruction) {
         }
 }
 
+func getCondTermName(term ir.Terminator) string {
+        switch term := term.(type) {
+        case *ir.TermBr:
+                return term.Target.Name
+        default:
+                return ""
+        }
+}
+
 func printFuncBlock(b *ir.BasicBlock, funcname string) {
         for _, inst := range b.Insts {
                 printInstruction(inst)
@@ -157,11 +166,19 @@ func printFuncBlock(b *ir.BasicBlock, funcname string) {
         case *ir.TermCondBr:
                 fun1 := "_br" + term.TargetTrue.Parent.Name + term.TargetTrue.Name
                 fun2 := "_br" + term.TargetFalse.Parent.Name + term.TargetFalse.Name
-                fmt.Printf("if [ %s ]; then\n\teval `%s local[@]`\nelse\n\teval `%s local[@]`\nfi\n", getRValue(term.Cond), fun1, fun2)
-                switch targetterm := term.Succs()[0].Term.(type) {
+                fmt.Printf("if [ %s ]; then\n", getRValue(term.Cond))
+                fmt.Printf("  eval `%s local[@]`\n", fun1)
+                switch targetTerm := term.TargetTrue.Term.(type) {
                 case *ir.TermBr:
-                        fmt.Printf("eval `%s local[@]`\n", "_br" + funcname + targetterm.Target.Name)
+                        fmt.Printf("  eval `%s local[@]`\n", "_br" + term.TargetTrue.Parent.Name + targetTerm.Target.Name)
                 }
+                fmt.Printf("else\n")
+                fmt.Printf("  eval `%s local[@]`\n", fun2)
+                switch targetTerm := term.TargetFalse.Term.(type) {
+                case *ir.TermBr:
+                        fmt.Printf("  eval `%s local[@]`\n", "_br" + term.TargetFalse.Parent.Name + targetTerm.Target.Name)
+                }
+                fmt.Printf("fi\n")
         }
 }
 

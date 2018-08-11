@@ -22,6 +22,7 @@ declare -A TEST_LIST=(
 
 # branching tests
         [branch/branch]="2"
+        [branch/nestedbranch]="2"
 )
 
 PASS_NUM=0
