@@ -54,15 +54,12 @@ func getRValue(v value.Value) string {
 }
 
 func printIcmp(inst ir.InstICmp) {
-        var op string
         switch inst.Pred {
         case ir.IntNE:
-                        op = " != "
+                fmt.Printf("local[r%s]=`if [ \"%s\" -neq \"%s\" ]; then echo false; else echo true; fi`\n", inst.Name, getRValue(inst.X), getRValue(inst.Y))
         default:
-                        op = ""
+                fmt.Printf("local[r%s]=`if [ \"%s\" -eq \"%s\" ]; then echo false; else echo true; fi`\n", inst.Name, getRValue(inst.X), getRValue(inst.Y))
         }
-
-        fmt.Printf("r%s=`if [ \"$r\"%s%s\"$r\"%s ]; then echo false; else echo true; fi`\n", inst.Name, getLValue(inst.X), op, getLValue(inst.Y))
         return
 }
 
@@ -134,17 +131,23 @@ func printInstruction(inst ir.Instruction) {
         }
 }
 
-func printFuncBlock(b *ir.BasicBlock) {
+func printFuncBlock(b *ir.BasicBlock, funcname string) {
         for _, inst := range b.Insts {
                 printInstruction(inst)
         }
         switch term := b.Term.(type) {
         case *ir.TermRet:
-                fmt.Printf("return %s\n", getRValue(term.X))
+                fmt.Printf("local[ret]=%s\n", getRValue(term.X))
         case *ir.TermCondBr:
                 fun1 := "_br" + term.TargetTrue.Parent.Name + term.TargetTrue.Name
                 fun2 := "_br" + term.TargetFalse.Parent.Name + term.TargetFalse.Name
                 fmt.Printf("if [ $r%s ]; then %s local[@]; else %s local[@]; fi\n", getLValue(term.Cond), fun1, fun2)
+                fmt.Printf("local=${!?}\n")
+                switch targetterm := term.Succs()[0].Term.(type) {
+                case *ir.TermBr:
+                        fmt.Printf("%s local[@]\n", "_br" + funcname + targetterm.Target.Name)
+                }
+                fmt.Printf("local=${!?}\n")
         }
 }
 
@@ -153,14 +156,16 @@ func convertFuncToBash(f *ir.Function) {
         fmt.Printf("%s() {\n", f.Name)
         fmt.Printf("local=${!1}\n")
         fmt.Printf("%s\n", "_br" + f.Name + f.Blocks[0].GetName() + " local[@]")
-        fmt.Printf("return $?\n")
+        fmt.Printf("local=${!?}\n")
+        fmt.Printf("return local[@]\n")
         fmt.Printf("}\n")
 
         // Blocks
         for _, block := range f.Blocks {
                 fmt.Printf("%s() {\n", "_br" + f.GetName() + block.Name)
                 fmt.Printf("local=${!1}\n")
-                printFuncBlock(block)
+                printFuncBlock(block, f.GetName())
+                fmt.Printf("return local[@]\n")
                 fmt.Printf("}\n")
         }
 }
@@ -185,5 +190,6 @@ func main() {
 
         fmt.Println("declare -A local")
         fmt.Println("main local[@]")
+        fmt.Println("exit ${local[ret]}")
 }
 

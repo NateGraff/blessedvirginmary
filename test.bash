@@ -18,6 +18,9 @@ declare -A TEST_LIST=(
         [math/fourdivtwo]="2"
         [math/threeminusone]="2"
 #        [addone]="2"
+
+# branching tests
+        [branch/branch]="2"
 )
 
 PASS_NUM=0
