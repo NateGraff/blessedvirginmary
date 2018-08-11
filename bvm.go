@@ -54,12 +54,29 @@ func getRValue(v value.Value) string {
 }
 
 func printIcmp(inst ir.InstICmp) {
+	var operand string
         switch inst.Pred {
         case ir.IntNE:
-                fmt.Printf("local[r%s]=`if [ \"%s\" -neq \"%s\" ]; then echo false; else echo true; fi`\n", inst.Name, getRValue(inst.X), getRValue(inst.Y))
-        default:
-                fmt.Printf("local[r%s]=`if [ \"%s\" -eq \"%s\" ]; then echo false; else echo true; fi`\n", inst.Name, getRValue(inst.X), getRValue(inst.Y))
+				operand = "neq"
+        case ir.IntEQ:
+				operand = "eq"
+		case ir.IntUGT:
+		case ir.IntSGT:
+				operand = "gt"
+		case ir.IntUGE:
+		case ir.IntSGE:
+				operand = "ge"
+		case ir.IntULT:
+		case ir.IntSLT:
+				operand = "lt"
+		case ir.IntULE:
+		case ir.IntSLE:
+				operand = "le"
+		default:
+				operand = "eq"
         }
+
+		fmt.Printf("local[r%s]=`if [ \"%s\" -%s \"%s\" ]; then echo false; else echo true; fi`\n", inst.Name, getRValue(inst.X), operand, getRValue(inst.Y))
         return
 }
 
