@@ -2,7 +2,6 @@ package main
 
 import (
         "fmt"
-        "strings"
         "os"
         "log"
         "strconv"
@@ -35,7 +34,7 @@ func getConstant(c constant.Constant) string {
 func getLValue(v value.Value) string {
         switch val := v.(type) {
         case value.Named:
-                return "local[${local[r" + val.GetName() + "]}]"
+                return "local[r" + val.GetName() + "]"
         case constant.Constant:
                 return getConstant(val)
         default:
@@ -67,15 +66,16 @@ func printIcmp(inst ir.InstICmp) {
         return
 }
 
-func instAllocaHelper(inst *ir.InstAlloca) string {
+func instAllocaHelper(inst *ir.InstAlloca) {
         switch t := inst.Typ.Elem.(type) {
         case *types.ArrayType:
-                prefilled := strings.Repeat("0 ", int(t.Len))
-                return fmt.Sprintf("local[s%s]=(%s)\n%s=s\n", inst.Name, prefilled, getRValue(inst), inst.Name)
+                for idx := 0; idx < int(t.Len); idx++ {
+                        fmt.Printf("local[s%s_%d]=0;", inst.Name, idx)
+                }
+                fmt.Printf("\n%s=s%s\n", getLValue(inst), inst.Name)
         default:
-                return fmt.Sprintf("local[s%s]=0\nlocal[r%s]=local[s%s]\n", inst.Name, inst.Name, inst.Name)
+                fmt.Printf("local[s%s]=0\nlocal[r%s]=local[s%s]\n", inst.Name, inst.Name, inst.Name)
         }
-        return ""
 }
 
 func printInstruction(inst ir.Instruction) {
@@ -83,7 +83,7 @@ func printInstruction(inst ir.Instruction) {
         /* Memory Instructions */
 
         case *ir.InstAlloca:
-                fmt.Printf("%s", instAllocaHelper(inst))
+                instAllocaHelper(inst)
                 return
         case *ir.InstLoad:
                 fmt.Printf("local[r%s]=${local[%s]}\n", inst.Name, getRValue(inst.Src))
@@ -96,7 +96,7 @@ func printInstruction(inst ir.Instruction) {
                 if err != nil {
                         panic("")
                 }
-                fmt.Printf("%s=%s[%d]\n", getLValue(inst), getRValue(inst.Src), index)
+                fmt.Printf("%s=${local[%s_%d]}\n", getLValue(inst), getRValue(inst.Src), index)
                 return
 
         case *ir.InstCall:
