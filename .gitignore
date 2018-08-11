@@ -1,5 +1,5 @@
 blessedvirginmary
-reference/*.ll
+*.ll
 
 # Binaries for programs and plugins
 *.exe

@@ -12,6 +12,11 @@ declare -A TEST_LIST=(
         [ptr]="5"
         [ptrtoarray]="0"
         [branch]="0"
+# math tests
+        [math/oneplusone]="2"
+        [math/twotimestwo]="4"
+        [math/fourdivtwo]="2"
+        [math/threeminusone]="2"
 #        [addone]="2"
 )
 
