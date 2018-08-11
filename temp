@@ -1,0 +1,35 @@
+main() {
+local=${!1}
+eval `_brmain0 local[@]`
+declare -p local | sed -e 's/^declare -. [^=]*=//'
+}
+_brmain0() {
+local[s1]=0
+local[r1]=local[s1]
+local[s2]=0
+local[r2]=local[s2]
+local[${local[r1]}]=0
+local[${local[r2]}]=1
+local[r3]=${local[${local[r2]}]}
+local[r4]=`if [ "${local[r3]}" -eq "1" ]; then echo false; else echo true; fi`
+if [ $rlocal[r4] ]; then eval `_brmain5 local[@]`; else eval `_brmain6 local[@]`; fi
+local=${!?}
+eval `_brmain7 local[@]`
+declare -p local | sed -e 's/^declare -. [^=]*=//'
+}
+_brmain5() {
+local[${local[r1]}]=2
+declare -p local | sed -e 's/^declare -. [^=]*=//'
+}
+_brmain6() {
+local[${local[r1]}]=3
+declare -p local | sed -e 's/^declare -. [^=]*=//'
+}
+_brmain7() {
+local[r8]=${local[${local[r1]}]}
+local[ret]=${local[r8]}
+declare -p local | sed -e 's/^declare -. [^=]*=//'
+}
+declare -A local
+eval `main local[@]`
+exit ${local[ret]}

@@ -57,26 +57,25 @@ func printIcmp(inst ir.InstICmp) {
 	var operand string
         switch inst.Pred {
         case ir.IntNE:
-				operand = "neq"
+                operand = "ne"
         case ir.IntEQ:
-				operand = "eq"
-		case ir.IntUGT:
-		case ir.IntSGT:
-				operand = "gt"
-		case ir.IntUGE:
-		case ir.IntSGE:
-				operand = "ge"
-		case ir.IntULT:
-		case ir.IntSLT:
-				operand = "lt"
-		case ir.IntULE:
-		case ir.IntSLE:
-				operand = "le"
-		default:
-				operand = "eq"
+                operand = "eq"
+        case ir.IntUGT:
+        case ir.IntSGT:
+                operand = "gt"
+        case ir.IntUGE:
+        case ir.IntSGE:
+                operand = "ge"
+        case ir.IntULT:
+        case ir.IntSLT:
+                operand = "lt"
+        case ir.IntULE:
+        case ir.IntSLE:
+                operand = "le"
+        default:
+                operand = "eq"
         }
-
-		fmt.Printf("local[r%s]=`if [ \"%s\" -%s \"%s\" ]; then echo false; else echo true; fi`\n", inst.Name, getRValue(inst.X), operand, getRValue(inst.Y))
+        fmt.Printf("local[r%s]=`if [ \"%s\" -%s \"%s\" ]; then echo false; else echo true; fi`\n", inst.Name, getRValue(inst.X), operand, getRValue(inst.Y))
         return
 }
 
@@ -158,13 +157,11 @@ func printFuncBlock(b *ir.BasicBlock, funcname string) {
         case *ir.TermCondBr:
                 fun1 := "_br" + term.TargetTrue.Parent.Name + term.TargetTrue.Name
                 fun2 := "_br" + term.TargetFalse.Parent.Name + term.TargetFalse.Name
-                fmt.Printf("if [ $r%s ]; then %s local[@]; else %s local[@]; fi\n", getLValue(term.Cond), fun1, fun2)
-                fmt.Printf("local=${!?}\n")
+                fmt.Printf("if [ %s ]; then\n\teval `%s local[@]`\nelse\n\teval `%s local[@]`\nfi\n", getRValue(term.Cond), fun1, fun2)
                 switch targetterm := term.Succs()[0].Term.(type) {
                 case *ir.TermBr:
-                        fmt.Printf("%s local[@]\n", "_br" + funcname + targetterm.Target.Name)
+                        fmt.Printf("eval `%s local[@]`\n", "_br" + funcname + targetterm.Target.Name)
                 }
-                fmt.Printf("local=${!?}\n")
         }
 }
 
@@ -172,9 +169,8 @@ func convertFuncToBash(f *ir.Function) {
         // Top level function
         fmt.Printf("%s() {\n", f.Name)
         fmt.Printf("local=${!1}\n")
-        fmt.Printf("%s\n", "_br" + f.Name + f.Blocks[0].GetName() + " local[@]")
-        fmt.Printf("local=${!?}\n")
-        fmt.Printf("return local[@]\n")
+        fmt.Printf("eval `%s\n", "_br" + f.Name + f.Blocks[0].GetName() + " local[@]`")
+        fmt.Printf("declare -p local\n")
         fmt.Printf("}\n")
 
         // Blocks
@@ -182,7 +178,7 @@ func convertFuncToBash(f *ir.Function) {
                 fmt.Printf("%s() {\n", "_br" + f.GetName() + block.Name)
                 fmt.Printf("local=${!1}\n")
                 printFuncBlock(block, f.GetName())
-                fmt.Printf("return local[@]\n")
+                fmt.Printf("declare -p local\n")
                 fmt.Printf("}\n")
         }
 }
@@ -206,7 +202,7 @@ func main() {
         }
 
         fmt.Println("declare -A local")
-        fmt.Println("main local[@]")
+        fmt.Println("eval `main local[@]`")
         fmt.Println("exit ${local[ret]}")
 }
 
