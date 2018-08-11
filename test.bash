@@ -12,7 +12,7 @@ declare -A TEST_LIST=(
         [ptr]="5"
         [ptrtoarray]="0"
         [branch]="0"
-        [addone]="2"
+#        [addone]="2"
 )
 
 PASS_NUM=0

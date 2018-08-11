@@ -32,10 +32,10 @@ func getConstant(c constant.Constant) string {
         }
 }
 
-func getDstValue(v value.Value) string {
+func getLValue(v value.Value) string {
         switch val := v.(type) {
         case value.Named:
-                return val.GetName()
+                return "local[${local[r" + val.GetName() + "]}]"
         case constant.Constant:
                 return getConstant(val)
         default:
@@ -43,10 +43,10 @@ func getDstValue(v value.Value) string {
         }
 }
 
-func getSrcValue(v value.Value) string {
+func getRValue(v value.Value) string {
         switch val := v.(type) {
         case value.Named:
-                return "${r" + val.GetName() + "}"
+                return "${local[r" + val.GetName() + "]}"
         case constant.Constant:
                 return getConstant(val)
         default:
@@ -63,7 +63,7 @@ func printIcmp(inst ir.InstICmp) {
                         op = ""
         }
 
-        fmt.Printf("r%s=`if [ \"$r\"%s%s\"$r\"%s ]; then echo false; else echo true; fi`\n", inst.Name, getDstValue(inst.X), op, getDstValue(inst.Y))
+        fmt.Printf("r%s=`if [ \"$r\"%s%s\"$r\"%s ]; then echo false; else echo true; fi`\n", inst.Name, getLValue(inst.X), op, getLValue(inst.Y))
         return
 }
 
@@ -71,9 +71,9 @@ func instAllocaHelper(inst *ir.InstAlloca) string {
         switch t := inst.Typ.Elem.(type) {
         case *types.ArrayType:
                 prefilled := strings.Repeat("0 ", int(t.Len))
-                return fmt.Sprintf("s%s=(%s)\nr%s=s%s\n", inst.Name, prefilled, inst.Name, inst.Name)
+                return fmt.Sprintf("local[s%s]=(%s)\n%s=s\n", inst.Name, prefilled, getRValue(inst), inst.Name)
         default:
-                return fmt.Sprintf("declare s%s\nr%s=s%s\n", inst.Name, inst.Name, inst.Name)
+                return fmt.Sprintf("local[s%s]=0\nlocal[r%s]=local[s%s]\n", inst.Name, inst.Name, inst.Name)
         }
         return ""
 }
@@ -86,45 +86,45 @@ func printInstruction(inst ir.Instruction) {
                 fmt.Printf("%s", instAllocaHelper(inst))
                 return
         case *ir.InstLoad:
-                fmt.Printf("eval r%s=\\${%s}\n", inst.Name, getSrcValue(inst.Src))
+                fmt.Printf("local[r%s]=${local[%s]}\n", inst.Name, getRValue(inst.Src))
                 return
         case *ir.InstStore:
-                fmt.Printf("eval %s=%s\n", getSrcValue(inst.Dst), getSrcValue(inst.Src))
+                fmt.Printf("local[%s]=%s\n", getRValue(inst.Dst), getRValue(inst.Src))
                 return
         case *ir.InstGetElementPtr:
-                index, err := strconv.Atoi(getSrcValue(inst.Indices[1]))
+                index, err := strconv.Atoi(getRValue(inst.Indices[1]))
                 if err != nil {
                         panic("")
                 }
-                fmt.Printf("r%s=%s[%d]\n", inst.Name, getSrcValue(inst.Src), index)
+                fmt.Printf("%s=%s[%d]\n", getLValue(inst), getRValue(inst.Src), index)
                 return
 
         case *ir.InstCall:
-                fmt.Printf("%s ", getDstValue(inst.Callee))
-                for _, arg := range inst.Args {
-                        fmt.Printf("%s", getSrcValue(arg))
-                }
+                fmt.Printf("%s local[@]\n", getLValue(inst.Callee))
+                /*for _, arg := range inst.Args {
+                        fmt.Printf("%s", getRValue(arg))
+                }*/
                 fmt.Printf("\n")
 
         /* Math Instructions */
 
         case *ir.InstAdd:
-                fmt.Printf("r%s=$(expr %s + %s)\n", inst.Name, getSrcValue(inst.X), getSrcValue(inst.Y))
+                fmt.Printf("%s=$(expr %s + %s)\n", getLValue(inst), getRValue(inst.X), getRValue(inst.Y))
                 return
         case *ir.InstSub:
-                fmt.Printf("r%s=$(expr %s - %s)\n", inst.Name, getSrcValue(inst.X), getSrcValue(inst.Y))
+                fmt.Printf("%s=$(expr %s - %s)\n", getLValue(inst), getRValue(inst.X), getRValue(inst.Y))
                 return
         case *ir.InstMul:
-                fmt.Printf("r%s=$(expr %s \\* %s)\n", inst.Name, getSrcValue(inst.X), getSrcValue(inst.Y))
+                fmt.Printf("%s=$(expr %s \\* %s)\n", getLValue(inst), getRValue(inst.X), getRValue(inst.Y))
                 return
         case *ir.InstSDiv:
-                fmt.Printf("r%s=$(expr %s / %s)\n", inst.Name, getSrcValue(inst.X), getSrcValue(inst.Y))
+                fmt.Printf("%s=$(expr %s / %s)\n", getLValue(inst), getRValue(inst.X), getRValue(inst.Y))
                 return
         case  *ir.InstICmp:
                 printIcmp(*inst)
                 return
         case *ir.InstSRem:
-                fmt.Printf("r%s=$(expr %s %% %s)\n", inst.Name, getSrcValue(inst.X), getSrcValue(inst.Y))
+                fmt.Printf("%s=$(expr %s %% %s)\n", getLValue(inst), getRValue(inst.X), getRValue(inst.Y))
                 return
         // What about UDiv, URem?
         // Floating Point Instructions?
@@ -140,23 +140,26 @@ func printFuncBlock(b *ir.BasicBlock) {
         }
         switch term := b.Term.(type) {
         case *ir.TermRet:
-                fmt.Printf("return %s\n", getSrcValue(term.X))
+                fmt.Printf("return %s\n", getRValue(term.X))
         case *ir.TermCondBr:
                 fun1 := "_br" + term.TargetTrue.Parent.Name + term.TargetTrue.Name
                 fun2 := "_br" + term.TargetFalse.Parent.Name + term.TargetFalse.Name
-                fmt.Printf("if [ $r%s ]; then %s; else %s; fi\n", getDstValue(term.Cond), fun1, fun2)
+                fmt.Printf("if [ $r%s ]; then %s local[@]; else %s local[@]; fi\n", getLValue(term.Cond), fun1, fun2)
         }
 }
 
 func convertFuncToBash(f *ir.Function) {
         // Top level function
         fmt.Printf("%s() {\n", f.Name)
-        fmt.Printf("%s\n", "_br" + f.Name + f.Blocks[0].GetName())
+        fmt.Printf("local=${!1}\n")
+        fmt.Printf("%s\n", "_br" + f.Name + f.Blocks[0].GetName() + " local[@]")
+        fmt.Printf("return $?\n")
         fmt.Printf("}\n")
 
         // Blocks
         for _, block := range f.Blocks {
                 fmt.Printf("%s() {\n", "_br" + f.GetName() + block.Name)
+                fmt.Printf("local=${!1}\n")
                 printFuncBlock(block)
                 fmt.Printf("}\n")
         }
@@ -180,6 +183,7 @@ func main() {
                 }
         }
 
-        fmt.Println("main")
+        fmt.Println("declare -A local")
+        fmt.Println("main local[@]")
 }
 
