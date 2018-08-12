@@ -6,24 +6,25 @@ COLOR_NC='\033[0m'
 
 # Need Bash >= 4.x for associative arrays
 declare -A TEST_LIST=(
-        [ret_zero]="0"
-        [array]="15"
-        [math_stuff]="0"
-        [ptr]="5"
-        [ptrtoarray]="0"
-        [branch]="0"
-        [comparison]="5"
+        [basic/ret_zero]="0"
+        [basic/array]="15"
+        [basic/ptr]="5"
+        [basic/ptrtoarray]="0"
 # math tests
         [math/oneplusone]="2"
         [math/twotimestwo]="4"
         [math/fourdivtwo]="2"
         [math/threeminusone]="2"
-#        [addone]="2"
+        [math/math_stuff]="0"
+        [math/comparison]="5"
 
 # branching tests
         [branch/branch]="2"
         [branch/falsebranch]="3"
         [branch/nestedbranch]="2"
+
+# function tests
+#        [addone]="2"
 )
 
 PASS_NUM=0
