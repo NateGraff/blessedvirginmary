@@ -25,6 +25,7 @@ declare -A TEST_LIST=(
 
 # function tests
         [functions/noargs]="1"
+        [functions/playnice]="1"
 #        [addone]="2"
 )
 

@@ -124,8 +124,8 @@ func printInstruction(inst ir.Instruction) {
                 return
 
         case *ir.InstCall:
-                fmt.Printf("eval `%s local[@]`\n", getBareName(inst.Callee))
-                fmt.Printf("%s=${local[ret]}\n", getLValue(inst))
+                fmt.Printf("eval `%s`\n", getBareName(inst.Callee))
+                fmt.Printf("%s=${ret}\n", getLValue(inst))
 
         /* Math Instructions */
 
@@ -193,9 +193,10 @@ func printFuncBlock(b *ir.BasicBlock, funcname string) {
 func convertFuncToBash(f *ir.Function) {
         // Top level function
         fmt.Printf("%s() {\n", f.Name)
-        fmt.Printf("local=${!1}\n")
+        fmt.Printf("declare -A local\n")
         fmt.Printf("eval `%s\n", "_br" + f.Name + f.Blocks[0].GetName() + " local[@]`")
-        fmt.Printf("declare -p local\n")
+        fmt.Printf("ret=${local[ret]}\n")
+        fmt.Printf("declare -p ret\n")
         fmt.Printf("}\n")
 
         // Blocks
@@ -226,8 +227,7 @@ func main() {
                 }
         }
 
-        fmt.Println("declare -A local")
         fmt.Println("eval `main local[@]`")
-        fmt.Println("exit ${local[ret]}")
+        fmt.Println("exit ${ret}")
 }
 
