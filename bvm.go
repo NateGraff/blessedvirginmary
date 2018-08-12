@@ -42,6 +42,17 @@ func getLValue(v value.Value) string {
         }
 }
 
+func getBareName(v value.Value) string {
+        switch val := v.(type) {
+        case value.Named:
+                return val.GetName()
+        case constant.Constant:
+                return getConstant(val)
+        default:
+                return ""
+        }
+}
+
 func getRValue(v value.Value) string {
         switch val := v.(type) {
         case value.Named:
@@ -113,11 +124,8 @@ func printInstruction(inst ir.Instruction) {
                 return
 
         case *ir.InstCall:
-                fmt.Printf("%s local[@]\n", getLValue(inst.Callee))
-                /*for _, arg := range inst.Args {
-                        fmt.Printf("%s", getRValue(arg))
-                }*/
-                fmt.Printf("\n")
+                fmt.Printf("eval `%s local[@]`\n", getBareName(inst.Callee))
+                fmt.Printf("%s=${local[ret]}\n", getLValue(inst))
 
         /* Math Instructions */
 

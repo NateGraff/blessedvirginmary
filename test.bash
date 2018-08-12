@@ -24,6 +24,7 @@ declare -A TEST_LIST=(
         [branch/nestedbranch]="2"
 
 # function tests
+        [functions/noargs]="1"
 #        [addone]="2"
 )
 
