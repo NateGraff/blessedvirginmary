@@ -1,63 +1,37 @@
 #!/usr/bin/env bash
 
-COLOR_GREEN='\033[0;32m'
-COLOR_RED='\033[0;31m'
-COLOR_NC='\033[0m'
-
 # Need Bash >= 4.x for associative arrays
 declare -A TEST_LIST=(
-        [basic/ret_zero]="0"
-        [basic/array]="15"
-        [basic/ptr]="5"
-        [basic/ptrtoarray]="0"
+        [basic/ret_zero.ll]="0"
+        [basic/array.ll]="15"
+        [basic/ptr.ll]="5"
+        [basic/ptrtoarray.ll]="0"
 # math tests
-        [math/oneplusone]="2"
-        [math/twotimestwo]="4"
-        [math/fourdivtwo]="2"
-        [math/threeminusone]="2"
-        [math/math_stuff]="0"
-        [math/comparison]="5"
+        [math/oneplusone.ll]="2"
+        [math/twotimestwo.ll]="4"
+        [math/fourdivtwo.ll]="2"
+        [math/threeminusone.ll]="2"
+        [math/math_stuff.ll]="0"
+        [math/comparison.ll]="5"
 
 # branching tests
-        [branch/branch]="2"
-        [branch/falsebranch]="3"
-        [branch/nestedbranch]="2"
+        [branch/branch.ll]="2"
+        [branch/falsebranch.ll]="3"
+        [branch/nestedbranch.ll]="2"
 
 # function tests
-        [functions/noargs]="1"
-        [functions/playnice]="1"
-#        [addone]="2"
+        [functions/noargs.ll]="1"
+        [functions/playnice.ll]="1"
+#        [addone.ll]="2"
 )
-
-PASS_NUM=0
-FAIL_NUM=0
 
 echo "-------------------------"
 echo "Testing blessedvirginmary"
 echo "-------------------------"
 
-for TEST_NAME in "${!TEST_LIST[@]}"; do
-        TEST_EXPECTED=${TEST_LIST[$TEST_NAME]}
-
-        # make the LLVM IR
-        make -s -C reference ${TEST_NAME}.ll
-
-        # execute the transpiled Bash
-        ./blessedvirginmary reference/${TEST_NAME}.ll | bash
-
-        TEST_RETURN=$?
-        if [[ $TEST_EXPECTED -eq $TEST_RETURN ]]; then
-                echo -e " ${COLOR_GREEN}PASS ${COLOR_NC}${TEST_NAME}"
-                PASS_NUM=$(expr ${PASS_NUM} + 1)
-        else
-                echo -e " ${COLOR_RED}FAIL ${COLOR_NC}${TEST_NAME}"
-                echo "    Expected $TEST_EXPECTED but got $TEST_RETURN"
-                FAIL_NUM=$(expr ${FAIL_NUM} + 1)
-        fi
-done
+parallel --link ./runtest.bash ::: ${!TEST_LIST[@]} ::: ${TEST_LIST[@]}
 
 echo "-------------------------"
-echo -e "Pass count: ${COLOR_GREEN}${PASS_NUM}${COLOR_NC} Fail count: ${COLOR_RED}${FAIL_NUM}${COLOR_NC}"
 
 exit ${FAIL_NUM}
 
