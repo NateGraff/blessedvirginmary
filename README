@@ -1,7 +1,0 @@
-Bash crosscompiler
-
-Requirements
-
-``go get github.com/llir/llvm/ir``
-``go get github.com/llir/llvm/asm``
-
