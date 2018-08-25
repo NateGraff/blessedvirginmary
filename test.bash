@@ -23,7 +23,8 @@ declare -A TEST_LIST=(
         [functions/noargs.ll]="1"
         [functions/playnice.ll]="1"
         [functions/paramorder.ll]="1"
-#        [addone.ll]="2"
+        [functions/square.ll]="625"
+        [functions/addone.ll]="2"
 )
 
 echo "-------------------------"
