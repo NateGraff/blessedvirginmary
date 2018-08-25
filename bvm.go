@@ -98,7 +98,7 @@ func instAllocaHelper(inst *ir.InstAlloca) {
                 }
                 fmt.Printf("\n%s=s%s\n", getLValue(inst), inst.Name)
         default:
-                fmt.Printf("local[s%s]=0\nlocal[r%s]=local[s%s]\n", inst.Name, inst.Name, inst.Name)
+                fmt.Printf("local[s%s]=0\nlocal[r%s]=s%s\n", inst.Name, inst.Name, inst.Name)
         }
 }
 
@@ -124,7 +124,12 @@ func printInstruction(inst ir.Instruction) {
                 return
 
         case *ir.InstCall:
-                fmt.Printf("eval `%s`\n", getBareName(inst.Callee))
+                // create callee function context and install arguments starting at index r0
+                fmt.Printf("declare -A args\n");
+                for idx, arg := range inst.Args {
+                        fmt.Printf("args[r%d]=%s\n", idx, getRValue(arg))
+                }
+                fmt.Printf("eval `%s \"$(declare -p args)\"`\n", getBareName(inst.Callee))
                 fmt.Printf("%s=${ret}\n", getLValue(inst))
 
         /* Math Instructions */
@@ -175,16 +180,16 @@ func printFuncBlock(b *ir.BasicBlock, funcname string) {
                 fun1 := "_br" + term.TargetTrue.Parent.Name + term.TargetTrue.Name
                 fun2 := "_br" + term.TargetFalse.Parent.Name + term.TargetFalse.Name
                 fmt.Printf("if [ %s ]; then\n", getRValue(term.Cond))
-                fmt.Printf("  eval `%s local[@]`\n", fun1)
+                fmt.Printf("  eval `%s \"$(declare -p local)\"`\n", fun1)
                 switch targetTerm := term.TargetTrue.Term.(type) {
                 case *ir.TermBr:
-                        fmt.Printf("  eval `%s local[@]`\n", "_br" + term.TargetTrue.Parent.Name + targetTerm.Target.Name)
+                        fmt.Printf("  eval `%s \"$(declare -p local)\"`\n", "_br" + term.TargetTrue.Parent.Name + targetTerm.Target.Name)
                 }
                 fmt.Printf("else\n")
-                fmt.Printf("  eval `%s local[@]`\n", fun2)
+                fmt.Printf("  eval `%s \"$(declare -p local)\"`\n", fun2)
                 switch targetTerm := term.TargetFalse.Term.(type) {
                 case *ir.TermBr:
-                        fmt.Printf("  eval `%s local[@]`\n", "_br" + term.TargetFalse.Parent.Name + targetTerm.Target.Name)
+                        fmt.Printf("  eval `%s \"$(declare -p local)\"`\n", "_br" + term.TargetFalse.Parent.Name + targetTerm.Target.Name)
                 }
                 fmt.Printf("fi\n")
         }
@@ -193,8 +198,8 @@ func printFuncBlock(b *ir.BasicBlock, funcname string) {
 func convertFuncToBash(f *ir.Function) {
         // Top level function
         fmt.Printf("%s() {\n", f.Name)
-        fmt.Printf("declare -A local\n")
-        fmt.Printf("eval `%s\n", "_br" + f.Name + f.Blocks[0].GetName() + " local[@]`")
+        fmt.Printf("declare -A local=${1#*=}\n")
+        fmt.Printf("eval `%s\n", "_br" + f.Name + f.Blocks[0].GetName() + " \"$(declare -p local)\"`")
         fmt.Printf("ret=${local[ret]}\n")
         fmt.Printf("declare -p ret\n")
         fmt.Printf("}\n")
@@ -202,7 +207,7 @@ func convertFuncToBash(f *ir.Function) {
         // Blocks
         for _, block := range f.Blocks {
                 fmt.Printf("%s() {\n", "_br" + f.GetName() + block.Name)
-                fmt.Printf("local=${!1}\n")
+                fmt.Printf("declare -A local=${1#*=}\n")
                 printFuncBlock(block, f.GetName())
                 fmt.Printf("declare -p local\n")
                 fmt.Printf("}\n")
@@ -227,7 +232,9 @@ func main() {
                 }
         }
 
-        fmt.Println("eval `main local[@]`")
+        fmt.Println("declare -A args")
+        // insert arguments to main here
+        fmt.Println("eval `main \"$(declare -p args)\"`")
         fmt.Println("exit ${ret}")
 }
 
