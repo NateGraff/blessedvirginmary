@@ -5,10 +5,12 @@ import (
 	"log"
 	"os"
 	"strconv"
+
 	//"github.com/kr/pretty"
 	"github.com/llir/llvm/asm"
 	"github.com/llir/llvm/ir"
 	"github.com/llir/llvm/ir/constant"
+	"github.com/llir/llvm/ir/enum"
 	"github.com/llir/llvm/ir/types"
 	"github.com/llir/llvm/ir/value"
 )
@@ -19,7 +21,7 @@ func printUsage() {
 }
 
 func printFuncSig(f *ir.Function) {
-	fmt.Printf("%s() {\n", f.Name)
+	fmt.Printf("%s() {\n", name(f))
 }
 
 func getConstant(c constant.Constant) string {
@@ -34,7 +36,7 @@ func getConstant(c constant.Constant) string {
 func getLValue(v value.Value) string {
 	switch val := v.(type) {
 	case value.Named:
-		return "local[r" + val.GetName() + "]"
+		return "local[r" + name(val) + "]"
 	case constant.Constant:
 		return getConstant(val)
 	default:
@@ -45,7 +47,7 @@ func getLValue(v value.Value) string {
 func getBareName(v value.Value) string {
 	switch val := v.(type) {
 	case value.Named:
-		return val.GetName()
+		return name(val)
 	case constant.Constant:
 		return getConstant(val)
 	default:
@@ -56,7 +58,7 @@ func getBareName(v value.Value) string {
 func getRValue(v value.Value) string {
 	switch val := v.(type) {
 	case value.Named:
-		return "${local[r" + val.GetName() + "]}"
+		return "${local[r" + name(val) + "]}"
 	case constant.Constant:
 		return getConstant(val)
 	default:
@@ -64,41 +66,41 @@ func getRValue(v value.Value) string {
 	}
 }
 
-func printIcmp(inst ir.InstICmp) {
+func printIcmp(inst *ir.InstICmp) {
 	var operand string
 	switch inst.Pred {
-	case ir.IntNE:
+	case enum.IPredNE:
 		operand = "ne"
-	case ir.IntEQ:
+	case enum.IPredEQ:
 		operand = "eq"
-	case ir.IntUGT:
-	case ir.IntSGT:
+	case enum.IPredUGT:
+	case enum.IPredSGT:
 		operand = "gt"
-	case ir.IntUGE:
-	case ir.IntSGE:
+	case enum.IPredUGE:
+	case enum.IPredSGE:
 		operand = "ge"
-	case ir.IntULT:
-	case ir.IntSLT:
+	case enum.IPredULT:
+	case enum.IPredSLT:
 		operand = "lt"
-	case ir.IntULE:
-	case ir.IntSLE:
+	case enum.IPredULE:
+	case enum.IPredSLE:
 		operand = "le"
 	default:
 		operand = "eq"
 	}
-	fmt.Printf("local[r%s]=`if [ \"%s\" -%s \"%s\" ]; then echo true; fi`\n", inst.Name, getRValue(inst.X), operand, getRValue(inst.Y))
+	fmt.Printf("local[r%s]=`if [ \"%s\" -%s \"%s\" ]; then echo true; fi`\n", name(inst), getRValue(inst.X), operand, getRValue(inst.Y))
 	return
 }
 
 func instAllocaHelper(inst *ir.InstAlloca) {
-	switch t := inst.Typ.Elem.(type) {
+	switch t := inst.Typ.ElemType.(type) {
 	case *types.ArrayType:
 		for idx := 0; idx < int(t.Len); idx++ {
-			fmt.Printf("local[s%s_%d]=0;", inst.Name, idx)
+			fmt.Printf("local[s%s_%d]=0;", name(inst), idx)
 		}
-		fmt.Printf("\n%s=s%s\n", getLValue(inst), inst.Name)
+		fmt.Printf("\n%s=s%s\n", getLValue(inst), name(inst))
 	default:
-		fmt.Printf("local[s%s]=0\nlocal[r%s]=s%s\n", inst.Name, inst.Name, inst.Name)
+		fmt.Printf("local[s%s]=0\nlocal[r%s]=s%s\n", name(inst), name(inst), name(inst))
 	}
 }
 
@@ -110,7 +112,7 @@ func printInstruction(inst ir.Instruction) {
 		instAllocaHelper(inst)
 		return
 	case *ir.InstLoad:
-		fmt.Printf("local[r%s]=${local[%s]}\n", inst.Name, getRValue(inst.Src))
+		fmt.Printf("local[r%s]=${local[%s]}\n", name(inst), getRValue(inst.Src))
 		return
 	case *ir.InstStore:
 		fmt.Printf("local[%s]=%s\n", getRValue(inst.Dst), getRValue(inst.Src))
@@ -118,7 +120,7 @@ func printInstruction(inst ir.Instruction) {
 	case *ir.InstGetElementPtr:
 		index, err := strconv.Atoi(getRValue(inst.Indices[1]))
 		if err != nil {
-			panic("")
+			panic(err)
 		}
 		fmt.Printf("%s=%s_%d\n", getLValue(inst), getRValue(inst.Src), index)
 		return
@@ -147,7 +149,7 @@ func printInstruction(inst ir.Instruction) {
 		fmt.Printf("%s=$(expr %s / %s)\n", getLValue(inst), getRValue(inst.X), getRValue(inst.Y))
 		return
 	case *ir.InstICmp:
-		printIcmp(*inst)
+		printIcmp(inst)
 		return
 	case *ir.InstSRem:
 		fmt.Printf("%s=$(expr %s %% %s)\n", getLValue(inst), getRValue(inst.X), getRValue(inst.Y))
@@ -163,7 +165,7 @@ func printInstruction(inst ir.Instruction) {
 func getCondTermName(term ir.Terminator) string {
 	switch term := term.(type) {
 	case *ir.TermBr:
-		return term.Target.Name
+		return name(term.Target)
 	default:
 		return ""
 	}
@@ -177,41 +179,54 @@ func printFuncBlock(b *ir.BasicBlock, funcname string) {
 	case *ir.TermRet:
 		fmt.Printf("local[ret]=%s\n", getRValue(term.X))
 	case *ir.TermCondBr:
-		fun1 := "_br" + term.TargetTrue.Parent.Name + term.TargetTrue.Name
-		fun2 := "_br" + term.TargetFalse.Parent.Name + term.TargetFalse.Name
+		fun1 := "_br" + funcname + name(term.TargetTrue)
+		fun2 := "_br" + funcname + name(term.TargetFalse)
 		fmt.Printf("if [ %s ]; then\n", getRValue(term.Cond))
 		fmt.Printf("  eval `%s \"$(declare -p local)\"`\n", fun1)
 		switch targetTerm := term.TargetTrue.Term.(type) {
 		case *ir.TermBr:
-			fmt.Printf("  eval `%s \"$(declare -p local)\"`\n", "_br"+term.TargetTrue.Parent.Name+targetTerm.Target.Name)
+			fmt.Printf("  eval `%s \"$(declare -p local)\"`\n", "_br"+funcname+name(targetTerm.Target))
 		}
 		fmt.Printf("else\n")
 		fmt.Printf("  eval `%s \"$(declare -p local)\"`\n", fun2)
 		switch targetTerm := term.TargetFalse.Term.(type) {
 		case *ir.TermBr:
-			fmt.Printf("  eval `%s \"$(declare -p local)\"`\n", "_br"+term.TargetFalse.Parent.Name+targetTerm.Target.Name)
+			fmt.Printf("  eval `%s \"$(declare -p local)\"`\n", "_br"+funcname+name(targetTerm.Target))
 		}
 		fmt.Printf("fi\n")
 	}
 }
 
 func convertFuncToBash(f *ir.Function) {
+	if len(f.Blocks) == 0 {
+		return
+	}
+	// Assign IDs to unnamed local variables.
+	if err := f.AssignIDs(); err != nil {
+		panic(err)
+	}
 	// Top level function
-	fmt.Printf("%s() {\n", f.Name)
+	fmt.Printf("%s() {\n", name(f))
 	fmt.Printf("declare -A local=${1#*=}\n")
-	fmt.Printf("eval `%s\n", "_br"+f.Name+f.Blocks[0].GetName()+" \"$(declare -p local)\"`")
+	fmt.Printf("eval `%s\n", "_br"+name(f)+name(f.Blocks[0])+" \"$(declare -p local)\"`")
 	fmt.Printf("ret=${local[ret]}\n")
 	fmt.Printf("declare -p ret\n")
 	fmt.Printf("}\n")
 
 	// Blocks
 	for _, block := range f.Blocks {
-		fmt.Printf("%s() {\n", "_br"+f.GetName()+block.Name)
+		fmt.Printf("%s() {\n", "_br"+name(f)+name(block))
 		fmt.Printf("declare -A local=${1#*=}\n")
-		printFuncBlock(block, f.GetName())
+		printFuncBlock(block, name(f))
 		fmt.Printf("declare -p local\n")
 		fmt.Printf("}\n")
 	}
+}
+
+// name returns the name or ID of the given value.
+func name(v value.Named) string {
+	const prefix = "%"
+	return v.Ident()[len(prefix):]
 }
 
 func main() {
