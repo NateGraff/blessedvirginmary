@@ -20,7 +20,7 @@ func printUsage() {
 	fmt.Printf("    blessedvirginmary <input>.ir [<input2>.ir [<input3>.ir ... ] ]\n")
 }
 
-func printFuncSig(f *ir.Function) {
+func printFuncSig(f *ir.Func) {
 	fmt.Printf("%s() {\n", name(f))
 }
 
@@ -171,7 +171,7 @@ func getCondTermName(term ir.Terminator) string {
 	}
 }
 
-func printFuncBlock(b *ir.BasicBlock, funcname string) {
+func printFuncBlock(b *ir.Block, funcname string) {
 	for _, inst := range b.Insts {
 		printInstruction(inst)
 	}
@@ -197,7 +197,7 @@ func printFuncBlock(b *ir.BasicBlock, funcname string) {
 	}
 }
 
-func convertFuncToBash(f *ir.Function) {
+func convertFuncToBash(f *ir.Func) {
 	if len(f.Blocks) == 0 {
 		return
 	}
