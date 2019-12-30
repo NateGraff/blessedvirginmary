@@ -183,13 +183,13 @@ func printFuncBlock(b *ir.Block, funcname string) {
 		fun2 := "_br" + funcname + name(term.TargetFalse)
 		fmt.Printf("if [ %s ]; then\n", getRValue(term.Cond))
 		fmt.Printf("  eval `%s \"$(declare -p local)\"`\n", fun1)
-		switch targetTerm := term.TargetTrue.Term.(type) {
+		switch targetTerm := term.TargetTrue.(*ir.Block).Term.(type) {
 		case *ir.TermBr:
 			fmt.Printf("  eval `%s \"$(declare -p local)\"`\n", "_br"+funcname+name(targetTerm.Target))
 		}
 		fmt.Printf("else\n")
 		fmt.Printf("  eval `%s \"$(declare -p local)\"`\n", fun2)
-		switch targetTerm := term.TargetFalse.Term.(type) {
+		switch targetTerm := term.TargetFalse.(*ir.Block).Term.(type) {
 		case *ir.TermBr:
 			fmt.Printf("  eval `%s \"$(declare -p local)\"`\n", "_br"+funcname+name(targetTerm.Target))
 		}
@@ -224,9 +224,12 @@ func convertFuncToBash(f *ir.Func) {
 }
 
 // name returns the name or ID of the given value.
-func name(v value.Named) string {
-	const prefix = "%"
-	return v.Ident()[len(prefix):]
+func name(v value.Value) string {
+	named, ok := v.(value.Named)
+	if !ok {
+		panic(fmt.Errorf("unable to get name of value %q", v.Ident()))
+	}
+	return named.Name()
 }
 
 func main() {
